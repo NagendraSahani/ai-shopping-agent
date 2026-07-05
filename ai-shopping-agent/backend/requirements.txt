@@ -10,3 +10,13 @@ alembic
 pydantic
 pydantic-settings
 redis
+email-validator
+passlib[bcrypt]
+python-jose[cryptography]
+
+
+langgraph
+tavily-python
+google-search-results
+beautifulsoup4
+requests

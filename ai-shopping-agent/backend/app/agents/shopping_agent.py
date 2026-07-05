@@ -1,7 +1,11 @@
 from typing import TypedDict
-
+import json
+from app.tools.recommendation_tool import RecommendationTool
+from app.tools.comparison_table_tool import ComparisonTableTool
+from app.tools.history_tool import HistoryTool
 from langgraph.graph import END, StateGraph
 
+from app.tools.planner_tool import PlannerTool
 from app.tools.tavily_tool import TavilyTool
 from app.tools.serpapi_tool import SerpAPITool
 from app.tools.extractor_tool import ExtractorTool
@@ -12,9 +16,9 @@ from app.tools.review_tool import ReviewTool
 class AgentState(TypedDict):
 
     query: str
+    plan: dict
 
     tavily_result: dict
-
     serpapi_result: dict
 
     products: list
@@ -27,6 +31,39 @@ class AgentState(TypedDict):
 
 
 class ShoppingAgent:
+
+    # ---------------- Planner ---------------- #
+
+    def planner_node(
+        self,
+        state: AgentState,
+    ):
+
+        planner = PlannerTool()
+
+        try:
+
+            state["plan"] = json.loads(
+                planner.plan(
+                    state["query"]
+                )
+            )
+
+        except Exception:
+
+            state["plan"] = {
+
+                "need_search": True,
+
+                "need_reviews": True,
+
+                "need_compare": True,
+
+            }
+
+        return state
+
+    # ---------------- Tavily ---------------- #
 
     def tavily_node(
         self,
@@ -41,6 +78,8 @@ class ShoppingAgent:
 
         return state
 
+    # ---------------- SerpAPI ---------------- #
+
     def serpapi_node(
         self,
         state: AgentState,
@@ -54,6 +93,8 @@ class ShoppingAgent:
 
         return state
 
+    # ---------------- Extract ---------------- #
+
     def extract_node(
         self,
         state: AgentState,
@@ -64,6 +105,8 @@ class ShoppingAgent:
         )
 
         return state
+
+    # ---------------- Compare ---------------- #
 
     def compare_node(
         self,
@@ -76,42 +119,265 @@ class ShoppingAgent:
 
         return state
 
+    # ---------------- Review ---------------- #
+
     def review_node(
         self,
         state: AgentState,
     ):
 
         state["review"] = ReviewTool.summarize(
-            state["products"]
+            state["best_product"]
         )
 
+
+
+
+
+
         return state
+
+    
+    # ---------------- Final ---------------- #
 
     def final_node(
         self,
         state: AgentState,
     ):
 
+        best = state.get("best_product")
+
+        if not best:
+
+            state["final_result"] = {
+
+                "query": state["query"],
+
+                "message": "No suitable product found.",
+
+                "all_products": [],
+
+            }
+
+            return state
+
+
+        ai_recommendation = RecommendationTool.recommend(
+            best,
+            state["products"],
+        )
+
+        comparison_table = ComparisonTableTool.build(
+            state["products"],
+        )
+        sorted_products = sorted(
+            state["products"],
+            key=lambda x: x.get(
+                "comparison",
+                {},
+            ).get(
+                "total_score",
+                0,
+            ),
+            reverse=True,
+        )
+
+        alternatives = []
+
+        for product in sorted_products:
+
+            if product.get("name") == best.get("name"):
+                continue
+
+            alternatives.append({
+
+                "name": product.get(
+                    "name",
+                    "",
+                ),
+
+                "platform": product.get(
+                    "platform",
+                    "",
+                ),
+
+                "price": product.get(
+                    "price",
+                    0,
+                ),
+
+                "rating": product.get(
+                    "rating",
+                    0,
+                ),
+
+                "reviews": product.get(
+                    "reviews",
+                    0,
+                ),
+
+                "confidence": product.get(
+                    "confidence",
+                    0,
+                ),
+
+                "buy_link": product.get(
+                    "link",
+                    "",
+                ),
+
+            })
+
+            if len(alternatives) == 3:
+                break
+
+
+
+
+
+
+
         state["final_result"] = {
 
             "query": state["query"],
 
-            "best_product": state["best_product"],
+            "plan": state.get(
+                "plan",
+                {},
+            ),
 
-            "all_products": state["products"],
+            "best_product": {
 
-            "review": state["review"],
+                "name": best.get(
+                    "name",
+                    "",
+                ),
 
-            "sources": state["tavily_result"],
+                "platform": best.get(
+                    "platform",
+                    "",
+                ),
+
+                "price": best.get(
+                    "price",
+                    0,
+                ),
+
+                "rating": best.get(
+                    "rating",
+                    0,
+                ),
+
+                "reviews": best.get(
+                    "reviews",
+                    0,
+                ),
+
+                "confidence": best.get(
+                    "confidence",
+                    0,
+                ),
+
+                "buy_link": best.get(
+                    "link",
+                    "",
+                ),
+
+                "thumbnail": best.get(
+                    "thumbnail",
+                    "",
+                ),
+
+
+                "score_breakdown": best.get(
+                    "comparison",
+                    {},
+                ),
+
+
+
+
+
+
+
+
+
+            },
+
+
+
+            "comparison": best.get(
+                "comparison",
+                {},
+            ),
+
+            "comparison_table": comparison_table,
+            "alternatives": alternatives,
+
+            "ai_recommendation": ai_recommendation,
+
+            "review": state.get(
+                "review",
+                "",
+            ),
+
+            "products_found": len(
+                state.get(
+                    "products",
+                    [],
+                )
+            ),
+
+            "all_products": state.get(
+                "products",
+                [],
+            ),
+
+            "sources": state.get(
+                "tavily_result",
+                {},
+            ),
+
+            "recommendation": {
+
+                "summary": f"{best.get('name')} is the best overall choice.",
+
+                "why_selected": [
+
+                    "Lowest effective price",
+
+                    "High customer rating",
+
+                    "Large number of verified reviews",
+
+                    "Trusted seller",
+
+                    "Highest overall comparison score",
+
+                ],
+
+                "confidence": f"{best.get('confidence',0)}%",
+
+            },
 
         }
 
+        HistoryTool.save(
+            state["final_result"]
+        )
+
         return state
+    # ---------------- Graph ---------------- #
 
     def build(self):
 
         graph = StateGraph(
             AgentState
+        )
+
+        graph.add_node(
+            "planner",
+            self.planner_node,
         )
 
         graph.add_node(
@@ -145,7 +411,12 @@ class ShoppingAgent:
         )
 
         graph.set_entry_point(
-            "tavily"
+            "planner",
+        )
+
+        graph.add_edge(
+            "planner",
+            "tavily",
         )
 
         graph.add_edge(

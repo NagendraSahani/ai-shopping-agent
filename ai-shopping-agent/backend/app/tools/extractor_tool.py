@@ -26,7 +26,13 @@ class ExtractorTool:
                     "price": price,
                     "rating": item.get("rating", 0),
                     "reviews": item.get("reviews", 0),
-                    "link": item.get("link", ""),
+                    "link": (
+                        item.get("product_link")
+                        or item.get("link")
+                        or item.get("serpapi_link")
+                        or ""
+                    ),
+
                     "thumbnail": item.get("thumbnail", ""),
                 }
             )

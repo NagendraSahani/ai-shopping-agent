@@ -1,20 +1,63 @@
-from sqlalchemy.orm import Session
-
-from app.models.price_history import PriceHistory
+import json
+import os
 
 
 class HistoryTool:
 
-    @staticmethod
-    def history(
-        db: Session,
-        product_id: int,
-    ):
+    FILE = "history.json"
 
-        return (
-            db.query(PriceHistory)
-            .filter(
-                PriceHistory.product_id == product_id
+    @staticmethod
+    def load():
+
+        if not os.path.exists(
+            HistoryTool.FILE
+        ):
+            return []
+
+        with open(
+            HistoryTool.FILE,
+            "r",
+            encoding="utf8",
+        ) as f:
+
+            return json.load(f)
+
+    @staticmethod
+    def save(result):
+
+        history = HistoryTool.load()
+
+        history.append(result)
+
+        history = history[-30:]
+
+        with open(
+
+            HistoryTool.FILE,
+
+            "w",
+
+            encoding="utf8",
+
+        ) as f:
+
+            json.dump(
+
+                history,
+
+                f,
+
+                indent=4,
+
             )
-            .all()
-        )
+
+    @staticmethod
+    def get_last():
+
+        history = HistoryTool.load()
+
+        if len(history):
+
+            return history[-1]
+
+        return None

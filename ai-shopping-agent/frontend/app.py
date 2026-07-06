@@ -6,7 +6,7 @@ from datetime import datetime
 # ============================================================
 # CONFIG (Backend unchanged)
 # ============================================================
-API_URL = "http://127.0.0.1:8000/agent/shopping"
+API_URL = "https://ai-shopping-agent-1-4ihn.onrender.com"
 
 st.set_page_config(
     page_title="AI Shopping Agent",

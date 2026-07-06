@@ -12,7 +12,7 @@ from app.api.agent import router as agent_router
 
 
 print(settings.GOOGLE_API_KEY)
-print("Database URL:", settings.DATABASE_URL)
+
 print("GOOGLE_API_KEY =", settings.GOOGLE_API_KEY)
 
 #Base.metadata.create_all(bind=engine)

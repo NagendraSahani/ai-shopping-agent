@@ -1,0 +1,22 @@
+# Virtual Environment
+.venv/
+
+# Environment Variables
+.env
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Local History
+history.json
+
+
+__pycache__/
+*.pyc
+.venv/
+.env
+history.json

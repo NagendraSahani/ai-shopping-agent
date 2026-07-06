@@ -11,9 +11,7 @@ from app.core.config import settings
 from app.api.agent import router as agent_router
 
 
-print(settings.GOOGLE_API_KEY)
 
-print("GOOGLE_API_KEY =", settings.GOOGLE_API_KEY)
 
 #Base.metadata.create_all(bind=engine)
 app = FastAPI(

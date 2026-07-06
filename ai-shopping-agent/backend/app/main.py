@@ -33,3 +33,10 @@ app.include_router(agent_router)
    #     "version": settings.VERSION,
     #    "status": "running",
     #}
+
+@app.get("/")
+def home():
+    return {
+        "message": "AI Shopping Agent Backend is Running 🚀",
+        "docs": "/docs",
+    }
